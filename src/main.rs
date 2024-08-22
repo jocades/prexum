@@ -13,24 +13,29 @@ use std::sync::{Arc, Mutex};
 use serde::{Deserialize, Serialize};
 use sysinfo::System;
 use tokio::fs;
+use tokio::sync::broadcast;
 use tokio::time::{sleep, Duration, Instant};
 use tower_http::services::ServeDir;
 
-#[derive(Default, Clone)]
+#[derive(Clone)]
 struct AppState {
-    cpus: Arc<Mutex<Vec<f32>>>,
+    tx: broadcast::Sender<Snapshot>,
 }
+
+type Snapshot = Vec<f32>;
 
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt::init();
 
-    let state = AppState::default();
+    let (tx, _) = broadcast::channel::<Snapshot>(1);
+
+    let state = AppState { tx: tx.clone() };
 
     let app = Router::new()
         .route("/", get(root))
         .route("/ws", get(websocket))
-        .route("/stats", get(stats))
+        // .route("/stats", get(stats))
         .route("/bench", get(bench))
         .nest_service("/pub", ServeDir::new("pub"))
         .with_state(state.clone());
@@ -39,10 +44,8 @@ async fn main() {
         let mut sys = System::new();
         loop {
             sys.refresh_cpu_usage();
-            {
-                let mut cpus = state.cpus.lock().unwrap();
-                *cpus = sys.cpus().iter().map(|cpu| cpu.cpu_usage()).collect();
-            }
+            let cpus = sys.cpus().iter().map(|cpu| cpu.cpu_usage()).collect();
+            let _ = tx.send(cpus);
             std::thread::sleep(sysinfo::MINIMUM_CPU_UPDATE_INTERVAL);
         }
     });
@@ -56,9 +59,9 @@ async fn root() -> Html<String> {
     Html(markup)
 }
 
-async fn stats(State(state): State<AppState>) -> Json<Vec<f32>> {
+/* async fn stats(State(state): State<AppState>) -> Json<Vec<f32>> {
     Json(state.cpus.lock().unwrap().clone())
-}
+} */
 
 async fn websocket(
     ws: WebSocketUpgrade,
@@ -68,11 +71,11 @@ async fn websocket(
 }
 
 async fn stream_stats(mut ws: WebSocket, state: AppState) {
-    loop {
-        let payload =
-            serde_json::to_string(&*state.cpus.lock().unwrap()).unwrap();
+    let mut rx = state.tx.subscribe();
+
+    while let Ok(msg) = rx.recv().await {
+        let payload = serde_json::to_string(&msg).unwrap();
         ws.send(Message::Text(payload)).await.unwrap();
-        tokio::time::sleep(Duration::from_millis(200)).await;
     }
 }
 

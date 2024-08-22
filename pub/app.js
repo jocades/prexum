@@ -448,6 +448,29 @@ c2.__b = function(n2) {
   }), r3.__H = undefined, t3 && c2.__e(t3, r3.__v));
 };
 var k2 = typeof requestAnimationFrame == "function";
+
+// app.tsx
+var cn = function(...classes) {
+  return classes.filter(Boolean).join(" ");
+};
+var Card = function({ className, ...props }) {
+  return u3("div", {
+    className: cn("rounded-lg border bg-card text-card-foreground shadow-sm", className),
+    ...props
+  }, undefined, false, undefined, this);
+};
+var CardHeader = function({ className, ...props }) {
+  return u3("div", {
+    className: cn("flex flex-col space-y-1.5 p-6", className),
+    ...props
+  }, undefined, false, undefined, this);
+};
+var CardTitle = function({ className, ...props }) {
+  return u3("h3", {
+    className: cn("text-2xl font-semibold leading-none tracking-tight", className),
+    ...props
+  }, undefined, false, undefined, this);
+};
 // node_modules/preact/jsx-runtime/dist/jsxRuntime.module.js
 var u3 = function(e3, t3, n2, o3, i3, u4) {
   t3 || (t3 = {});
@@ -473,6 +496,7 @@ function App() {
     setCpus(await res.json());
   }
   y2(() => {
+    document.documentElement.classList.add("dark");
     ws.onopen = () => {
       console.log("Connected");
     };
@@ -481,13 +505,47 @@ function App() {
     };
   }, []);
   return u3("main", {
-    class: "flex flex-col h-screen",
-    children: cpus.map((usage) => u3("div", {
-      class: "flex p-2 border",
-      children: usage
-    }, undefined, false, undefined, this))
-  }, undefined, false, undefined, this);
+    class: "flex flex-col container mx-auto max-w-xl py-24",
+    children: [
+      u3("h1", {
+        class: "text-6xl font-bold tracking-tight mb-12 self-center",
+        children: "Raspi @ Sapla"
+      }, undefined, false, undefined, this),
+      u3(Card, {
+        children: [
+          u3(CardHeader, {
+            children: u3(CardTitle, {
+              children: "CPU Usage"
+            }, undefined, false, undefined, this)
+          }, undefined, false, undefined, this),
+          u3("div", {
+            class: "flex flex-col space-y-4 p-6 pt-0",
+            children: cpus.map((usage) => u3("div", {
+              class: "flex flex-col",
+              children: [
+                u3("label", {
+                  class: "text-muted-foreground text-sm mb-1",
+                  children: [
+                    usage.toFixed(2),
+                    "%"
+                  ]
+                }, undefined, true, undefined, this),
+                u3("div", {
+                  class: "relative flex h-4 items-center justify-center bg-primary/20 rounded-full overflow-hidden",
+                  children: u3("div", {
+                    class: "h-full w-full flex-1 bg-primary transition-all",
+                    style: { transform: `translateX(-${100 - (usage || 0)}%)` }
+                  }, undefined, false, undefined, this)
+                }, undefined, false, undefined, this)
+              ]
+            }, undefined, true, undefined, this))
+          }, undefined, false, undefined, this)
+        ]
+      }, undefined, true, undefined, this)
+    ]
+  }, undefined, true, undefined, this);
 }
-
-// client.tsx
 B(u3(App, {}, undefined, false, undefined, this), document.body);
+export {
+  App as default
+};
