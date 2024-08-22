@@ -6,13 +6,7 @@ const ws = new WebSocket("/ws");
 export default function App() {
   const [cpus, setCpus] = useState<number[]>([]);
 
-  async function getStats() {
-    const res = await fetch("/stats");
-    setCpus(await res.json());
-  }
-
   useEffect(() => {
-    document.documentElement.classList.add("dark");
     ws.onopen = () => {
       console.log("Connected");
     };

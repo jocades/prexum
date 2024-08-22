@@ -491,12 +491,7 @@ var i3 = Array.isArray;
 var ws = new WebSocket("/ws");
 function App() {
   const [cpus, setCpus] = h2([]);
-  async function getStats() {
-    const res = await fetch("/stats");
-    setCpus(await res.json());
-  }
   y2(() => {
-    document.documentElement.classList.add("dark");
     ws.onopen = () => {
       console.log("Connected");
     };

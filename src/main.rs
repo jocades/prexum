@@ -1,20 +1,14 @@
 use axum::{
     extract::{
         ws::{Message, WebSocket, WebSocketUpgrade},
-        Path, State,
+        State,
     },
-    http::StatusCode,
-    response::{Html, IntoResponse, Response},
-    routing::{get, post},
-    Json, Router,
+    response::{Html, Response},
+    routing::get,
+    Router,
 };
-use std::sync::{Arc, Mutex};
-
-use serde::{Deserialize, Serialize};
 use sysinfo::System;
-use tokio::fs;
-use tokio::sync::broadcast;
-use tokio::time::{sleep, Duration, Instant};
+use tokio::{fs, sync::broadcast};
 use tower_http::services::ServeDir;
 
 #[derive(Clone)]
