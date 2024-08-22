@@ -360,6 +360,10 @@ var p2 = function(n2, u2, i2) {
   }
   return o2.__N || o2.__;
 };
+var y2 = function(n2, u2) {
+  var i2 = d2(t2++, 3);
+  !c2.__s && C2(i2.__H, u2) && (i2.__ = n2, i2.i = u2, r2.__H.__h.push(i2));
+};
 var j2 = function() {
   for (var n2;n2 = f2.shift(); )
     if (n2.__P && n2.__H)
@@ -382,6 +386,11 @@ var z2 = function(n2) {
 var B2 = function(n2) {
   var t2 = r2;
   n2.__c = n2.__(), r2 = t2;
+};
+var C2 = function(n2, t2) {
+  return !n2 || n2.length !== t2.length || t2.some(function(t3, r2) {
+    return t3 !== n2[r2];
+  });
 };
 var D = function(n2, t2) {
   return typeof t2 == "function" ? t2(n2) : t2;
@@ -455,37 +464,30 @@ var u3 = function(e3, t3, n2, o3, i3, u4) {
 var f3 = 0;
 var i3 = Array.isArray;
 
-// index.tsx
-var App = ({ title, children }) => {
-  return u3("body", {
-    class: "flex flex-col bg-blue-200 ",
-    children: [
-      u3("header", {
-        class: "sticky top-0 z-10 p-4 shadow bg-green-200",
-        children: u3("div", {
-          class: "flex space-x-2 items-center",
-          children: u3("img", {
-            src: "/pub/img/palm-tree.png",
-            class: "size-8 rotate-[20deg] cursor-pointer hover:rotate-0 transition-transform duration-200 ease"
-          }, undefined, false, undefined, this)
-        }, undefined, false, undefined, this)
-      }, undefined, false, undefined, this),
-      u3("main", {
-        class: "flex flex-col container max-w-4xl self-center py-4 gap-y-4 bg-red-200",
-        children
-      }, undefined, false, undefined, this)
-    ]
-  }, undefined, true, undefined, this);
-};
-var Counter = (props) => {
-  const [count, setCount] = h2(props.count ?? 0);
-  return u3("button", {
-    class: "border rounded px-4 py-1 hover:bg-zinc-300 transition-colors duration-150",
-    onClick: () => setCount(count + 1),
-    children: count
+// app.tsx
+var ws = new WebSocket("/ws");
+function App() {
+  const [cpus, setCpus] = h2([]);
+  async function getStats() {
+    const res = await fetch("/stats");
+    setCpus(await res.json());
+  }
+  y2(() => {
+    ws.onopen = () => {
+      console.log("Connected");
+    };
+    ws.onmessage = (e3) => {
+      setCpus(JSON.parse(e3.data));
+    };
+  }, []);
+  return u3("main", {
+    class: "flex flex-col h-screen",
+    children: cpus.map((usage) => u3("div", {
+      class: "flex p-2 border",
+      children: usage
+    }, undefined, false, undefined, this))
   }, undefined, false, undefined, this);
-};
-if (typeof window !== undefined) {
-  B(_(App, { title: "Raspi" }, _(Counter, { count: 10 })), document.body);
 }
-console.log("sup yoo");
+
+// client.tsx
+B(u3(App, {}, undefined, false, undefined, this), document.body);
