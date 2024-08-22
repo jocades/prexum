@@ -3,10 +3,12 @@ use axum::{
         ws::{Message, WebSocket, WebSocketUpgrade},
         State,
     },
-    response::{Html, Response},
-    routing::get,
-    Router,
+    response::{Html, IntoResponse, Response},
+    routing::{get, post},
+    Json, Router,
 };
+use serde::Deserialize;
+use serde_json::json;
 use sysinfo::System;
 use tokio::{fs, sync::broadcast};
 use tower_http::services::ServeDir;
@@ -29,8 +31,9 @@ async fn main() {
     let app = Router::new()
         .route("/", get(root))
         .route("/ws", get(websocket))
-        // .route("/stats", get(stats))
-        .route("/bench", get(bench))
+        .route("/api/stats", get(stats))
+        .route("/api/bench", get(bench))
+        .route("/api/bombardier", post(bombardier))
         .nest_service("/pub", ServeDir::new("pub"))
         .with_state(state.clone());
 
@@ -53,9 +56,13 @@ async fn root() -> Html<String> {
     Html(markup)
 }
 
-/* async fn stats(State(state): State<AppState>) -> Json<Vec<f32>> {
-    Json(state.cpus.lock().unwrap().clone())
-} */
+async fn stats() -> impl IntoResponse {
+    Json(json!({
+        "hostname": System::host_name(),
+        "kernel": System::kernel_version(),
+        "os": System::os_version(),
+    }))
+}
 
 async fn websocket(
     ws: WebSocketUpgrade,
@@ -74,3 +81,22 @@ async fn stream_stats(mut ws: WebSocket, state: AppState) {
 }
 
 async fn bench() {}
+
+async fn bombardier(Json(payload): Json<Credentials>) -> String {
+    if std::env::var("BOMBARDIER_PASSWORD").unwrap() != payload.password {
+        return "Unauthorized".into();
+    }
+
+    let command = tokio::process::Command::new("bombardier")
+        .arg("localhost:8000/api/bench")
+        .output()
+        .await
+        .unwrap();
+
+    String::from_utf8(command.stdout).unwrap()
+}
+
+#[derive(Deserialize)]
+struct Credentials {
+    password: String,
+}
