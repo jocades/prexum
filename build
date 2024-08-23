@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+cargo build --release
 cd web || exit
 NODE_ENV=production bun build app.tsx --outdir ../pub "$@"
 bunx tailwindcss -i app.css -o ../pub/app.css

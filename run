@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+
+if [ -z "$1" ]; then
+    echo "Usage: $0 <password> [--build]"
+    exit 1
+fi
+
+if [ "$2" == "-b" ] || [ "$2" == "--build" ]; then
+    ./build --minify
+fi
+
+mkdir -p task
+BOMBARDIER_PASSWORD="$1" target/release/prexum >task/out.log 2>task/err.log &
+PID=$!
+echo $PID >task/pid
+echo "Started background process with PID $PID"
+echo "To stop the server run 'kill \$(cat task/pid)'"

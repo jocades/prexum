@@ -16,7 +16,6 @@ use tower_http::services::ServeDir;
 #[derive(Clone)]
 struct AppState {
     tx: broadcast::Sender<Snapshot>,
-    bombing: bool,
 }
 
 type Snapshot = Vec<f32>;
@@ -27,10 +26,7 @@ async fn main() {
 
     let (tx, _) = broadcast::channel::<Snapshot>(1);
 
-    let state = AppState {
-        tx: tx.clone(),
-        bombing: false,
-    };
+    let state = AppState { tx: tx.clone() };
 
     let app = Router::new()
         .route("/", get(root))
@@ -58,7 +54,7 @@ async fn main() {
 }
 
 async fn root() -> Html<String> {
-    let markup = fs::read_to_string("index.html").await.unwrap();
+    let markup = fs::read_to_string("web/index.html").await.unwrap();
     Html(markup)
 }
 
@@ -88,33 +84,18 @@ async fn stream_stats(mut ws: WebSocket, state: AppState) {
 
 async fn bench() {}
 
-async fn bombardier(
-    State(mut state): State<AppState>,
-    Json(payload): Json<Credentials>,
-) -> String {
-    println!("--> BOMB REQ");
+async fn bombardier(Json(payload): Json<Credentials>) -> String {
     if std::env::var("BOMBARDIER_PASSWORD").unwrap() != payload.password {
-        println!("--> UNAUTH");
         return "Unauthorized".into();
     }
 
-    if state.bombing {
-        println!("--> BOMBING");
-        return "Already bombing.".into();
-    }
-
-    println!("--> BOMB");
-    state.bombing = true;
     let command = tokio::process::Command::new("bombardier")
         .arg("localhost:8000/api/bench")
         .output()
         .await
         .unwrap();
-    state.bombing = false;
 
-    let result = String::from_utf8(command.stdout).unwrap();
-    dbg!(&result);
-    result
+    String::from_utf8(command.stdout).unwrap()
 }
 
 #[derive(Deserialize)]
