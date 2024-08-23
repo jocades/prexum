@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
 
 cd web || exit
-bun build --minify --outdir ../pub app.tsx
-bunx tailwindcss -i ./app.css -o ../pub/app.css
+NODE_ENV=production bun build app.tsx --outdir ../pub "$@"
+bunx tailwindcss -i app.css -o ../pub/app.css

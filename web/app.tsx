@@ -1,36 +1,26 @@
 import { render } from "preact";
+import type { HTMLAttributes } from "preact/compat";
 import { useEffect, useRef, useState } from "preact/hooks";
 
 const ws = new WebSocket("/ws");
 
 interface Stats {
   hostname: string;
-  kervel: string;
+  kernel: string;
   os: string;
 }
 
-export default function App() {
+function App() {
   const [stats, setStats] = useState<Stats>();
   const [cpus, setCpus] = useState<number[]>([]);
-  const [bombardier, setBombardier] = useState<string>();
+  const [isBombing, setIsBombing] = useState(false);
+  const [result, setResult] = useState<string>();
   const ref = useRef<HTMLInputElement>(null);
 
-  async function fetchStats() {
+  const fetchStats = async () => {
     const res = await fetch("/api/stats");
     setStats(await res.json());
-  }
-
-  async function bomb() {
-    if (!ref.current?.value?.trim()) {
-      return;
-    }
-    const res = await fetch("/api/bombardier", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ password: ref.current.value }),
-    });
-    setBombardier(await res.text());
-  }
+  };
 
   useEffect(() => {
     ws.onopen = () => {
@@ -43,6 +33,27 @@ export default function App() {
 
     fetchStats();
   }, []);
+
+  async function bomb() {
+    if (!ref.current?.value?.trim()) {
+      return;
+    }
+
+    if (isBombing) {
+      setResult("Already bombing, wait...");
+      return;
+    }
+
+    setIsBombing(true);
+    setResult("Bombing...");
+    const res = await fetch("/api/bombardier", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ password: ref.current.value }),
+    });
+    setResult(await res.text());
+    setIsBombing(false);
+  }
 
   return (
     <main class="flex flex-col container mx-auto max-w-xl py-24">
@@ -79,19 +90,24 @@ export default function App() {
             ))}
           </section>
           <section>
-            <button
-              className="flex items-center justify-center px-4 py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/80"
-              onClick={() => bomb()}
+            <form
+              class="flex items-center space-x-2"
+              onSubmit={async (e) => {
+                e.preventDefault();
+                await bomb();
+              }}
             >
-              Bombardier
-            </button>
-            <input
-              ref={ref}
-              class="rounded-md px-4 py-2 mt-2"
-              type="password"
-              placeholder="Password"
-            />
-            <pre class="text-sm mt-2 overflow-auto">{bombardier}</pre>
+              <button className="flex items-center justify-center px-4 py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/80">
+                Bombardier
+              </button>
+              <input
+                ref={ref}
+                class="flex rounded-md px-4 py-2 border"
+                type="password"
+                placeholder="Password"
+              />
+            </form>
+            <pre class="text-sm mt-2 overflow-auto">{result}</pre>
           </section>
         </div>
       </Card>
@@ -99,11 +115,11 @@ export default function App() {
   );
 }
 
-function cn(...classes: (string | boolean | undefined)[]) {
+function cn(...classes: unknown[]) {
   return classes.filter(Boolean).join(" ");
 }
 
-function Card({ className, ...props }: any) {
+function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
     <div
       className={cn(
@@ -115,16 +131,7 @@ function Card({ className, ...props }: any) {
   );
 }
 
-function CardHeader({ className, ...props }: any) {
-  return (
-    <div
-      className={cn("flex flex-col space-y-1.5 p-6", className)}
-      {...props}
-    />
-  );
-}
-
-function CardTitle({ className, ...props }: any) {
+function CardTitle({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
     <h3
       className={cn(

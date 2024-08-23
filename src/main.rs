@@ -8,7 +8,7 @@ use axum::{
     Json, Router,
 };
 use serde::Deserialize;
-use serde_json::json;
+use serde_json::{json, Value};
 use sysinfo::System;
 use tokio::{fs, sync::broadcast};
 use tower_http::services::ServeDir;
@@ -16,6 +16,7 @@ use tower_http::services::ServeDir;
 #[derive(Clone)]
 struct AppState {
     tx: broadcast::Sender<Snapshot>,
+    bombing: bool,
 }
 
 type Snapshot = Vec<f32>;
@@ -26,7 +27,10 @@ async fn main() {
 
     let (tx, _) = broadcast::channel::<Snapshot>(1);
 
-    let state = AppState { tx: tx.clone() };
+    let state = AppState {
+        tx: tx.clone(),
+        bombing: false,
+    };
 
     let app = Router::new()
         .route("/", get(root))
@@ -48,6 +52,8 @@ async fn main() {
     });
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:8000").await.unwrap();
+
+    println!("Listening at {}", listener.local_addr().unwrap());
     axum::serve(listener, app).await.unwrap();
 }
 
@@ -56,7 +62,7 @@ async fn root() -> Html<String> {
     Html(markup)
 }
 
-async fn stats() -> impl IntoResponse {
+async fn stats() -> Json<Value> {
     Json(json!({
         "hostname": System::host_name(),
         "kernel": System::kernel_version(),
@@ -82,18 +88,33 @@ async fn stream_stats(mut ws: WebSocket, state: AppState) {
 
 async fn bench() {}
 
-async fn bombardier(Json(payload): Json<Credentials>) -> String {
+async fn bombardier(
+    State(mut state): State<AppState>,
+    Json(payload): Json<Credentials>,
+) -> String {
+    println!("--> BOMB REQ");
     if std::env::var("BOMBARDIER_PASSWORD").unwrap() != payload.password {
+        println!("--> UNAUTH");
         return "Unauthorized".into();
     }
 
+    if state.bombing {
+        println!("--> BOMBING");
+        return "Already bombing.".into();
+    }
+
+    println!("--> BOMB");
+    state.bombing = true;
     let command = tokio::process::Command::new("bombardier")
         .arg("localhost:8000/api/bench")
         .output()
         .await
         .unwrap();
+    state.bombing = false;
 
-    String::from_utf8(command.stdout).unwrap()
+    let result = String::from_utf8(command.stdout).unwrap();
+    dbg!(&result);
+    result
 }
 
 #[derive(Deserialize)]
