@@ -77,7 +77,7 @@ function App() {
             {cpus.map((usage, i) => (
               <div class="flex flex-col">
                 <div class="flex text-muted-foreground text-sm mb-1 justify-between">
-                  Core {i}
+                  Core {i + 1}
                   <span>{usage.toFixed(2)}%</span>
                 </div>
                 <div class="relative flex h-4 items-center justify-center bg-primary/20 rounded-full overflow-hidden">
