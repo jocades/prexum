@@ -10,7 +10,7 @@ use axum::{
 use serde::Deserialize;
 use serde_json::{json, Value};
 use sysinfo::System;
-use tokio::{fs, sync::broadcast};
+use tokio::{fs, net::TcpListener, sync::broadcast};
 use tower_http::services::ServeDir;
 
 #[derive(Clone)]
@@ -47,7 +47,7 @@ async fn main() {
         }
     });
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:8000").await.unwrap();
+    let listener = TcpListener::bind("0.0.0.0:8000").await.unwrap();
 
     println!("Listening at {}", listener.local_addr().unwrap());
     axum::serve(listener, app).await.unwrap();
